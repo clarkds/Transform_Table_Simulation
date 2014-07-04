@@ -211,13 +211,51 @@
         return degrees * Math.PI / 180;
     }
 
+    
 
+    var mouseDown = false;
+    var lastMouseX = null;
+    var lastMouseY = null;
+    
+    var moonRotationMatrix = mat4.create();
+    mat4.identity(moonRotationMatrix);
+    
+    function handleMouseDown(event) {
+        mouseDown = true;
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+    }
+
+      function handleMouseUp(event) {
+        mouseDown = false;
+      }
+
+      function handleMouseMove(event) {
+        if (!mouseDown) {
+          return;
+        }
+        var newX = event.clientX;
+        var newY = event.clientY;
+
+        var deltaX = newX - lastMouseX;
+        var newRotationMatrix = mat4.create();
+        mat4.identity(newRotationMatrix);
+        mat4.rotate(newRotationMatrix, degToRad(deltaX / 10), [0, 1, 0]);
+
+        var deltaY = newY - lastMouseY;
+        mat4.rotate(newRotationMatrix, degToRad(deltaY / 10), [1, 0, 0]);
+
+        mat4.multiply(newRotationMatrix, moonRotationMatrix, moonRotationMatrix);
+
+        lastMouseX = newX
+        lastMouseY = newY;
+      }
    
     var cubeVertexPositionBuffer;
     var cubeVertexColorBuffer;
     var cubeVertexTextureCoordBuffer;
     var cubeVertexIndexBuffer;
-
+    
     function initBuffers() {
     //Position Buffer
         cubeVertexPositionBuffer = gl.createBuffer();
@@ -405,8 +443,9 @@
         
         mat4.translate(mvMatrix, [0.0, 0.0, z]);
 
-        mat4.rotate(mvMatrix, degToRad(xRot), [1, 0, 0]);
-        mat4.rotate(mvMatrix, degToRad(yRot), [0, 1, 0]);
+        mat4.multiply(mvMatrix, moonRotationMatrix);
+        //mat4.rotate(mvMatrix, degToRad(xRot), [1, 0, 0]);
+        //mat4.rotate(mvMatrix, degToRad(yRot), [0, 1, 0]);
         
         gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -454,9 +493,11 @@
         }
         
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-            
-        for (var i=-15; i<15; i++) {
-            for (var j=-15; j<15; j++) {
+        var ki = parseInt(document.getElementById("noRow").value);
+        var kj = parseInt(document.getElementById("noCol").value);
+           
+        for (var i=(-1*ki); i<ki; i++) {
+            for (var j=(-1*kj); j<kj; j++) {
             mvPushMatrix();
             
             mat4.translate(mvMatrix, [(-2*i), 0.0, (-2*j)]);
@@ -550,9 +591,14 @@
 
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
+        
+        canvas.onmousedown = handleMouseDown;
+        document.onmouseup = handleMouseUp;
+        document.onmousemove = handleMouseMove;
 
-        document.onkeydown = handleKeyDown;
-        document.onkeyup = handleKeyUp;
+
+        //document.onkeydown = handleKeyDown;
+        //document.onkeyup = handleKeyUp;
         
         tick();
     }
@@ -589,6 +635,17 @@
     (Use cursor keys to spin the box and <code>Page Up</code>/<code>Page Down</code> to zoom out/in)
 
     <br/>
+    
+    <h2>Size of Table</h2>
+    
+     <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>#Pins:</b>
+            <td>Width: <input type="number" name="noRow" id="noRow" value="10" />
+            <td>Height: <input type="number" name="noCol" id="noCol" value="10" />
+        </tr>
+    </table>
+    
     <h2>Directional light:</h2>
 
     <table style="border: 0; padding: 10px;">
@@ -615,6 +672,12 @@
             <td>B: <input type="text" id="ambientB" value="0.2" />
         </tr>
     </table>
+    
+    </br>
+    /*<textArea rows=4 cols=80 id=f style="background-color:transparent;border:none" onkeyup="updateF()">
+f = function(x, y) {
+   return 2 + 2 * sin(.1 * x * y + time);
+}</textArea> */
 </body>
 
 </html>
